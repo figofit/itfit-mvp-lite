@@ -1,299 +1,176 @@
-"use client";
+const achievements = [
+  {
+    year: "2012",
+    title: "Postup do krajského přeboru",
+    detail:
+      "Historicky první postup z okresního přeboru po sérii 11 výher v řadě."
+  },
+  {
+    year: "2018",
+    title: "Vítěz okresního poháru",
+    detail:
+      "Finále před domácím publikem, výhra 3:1 a první velká trofej novodobé éry klubu."
+  },
+  {
+    year: "2023",
+    title: "Nejlepší obrana soutěže",
+    detail:
+      "Pouze 18 inkasovaných gólů za celou sezonu a nejdelší série bez obdržené branky."
+  }
+];
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import {
-  DailyLog,
-  defaultSettings,
-  formatDate,
-  getLastWorkoutTemplate,
-  getTodayKey,
-  readData,
-  updateDailyLog,
-  WorkoutTemplate
-} from "../src/lib/storage";
+const leagueHistory = [
+  {
+    season: "2023/24",
+    league: "Krajský přebor",
+    position: "5.",
+    record: "14V / 6R / 10P",
+    points: 48
+  },
+  {
+    season: "2022/23",
+    league: "Krajský přebor",
+    position: "7.",
+    record: "12V / 8R / 10P",
+    points: 44
+  },
+  {
+    season: "2021/22",
+    league: "I.A třída",
+    position: "2.",
+    record: "19V / 5R / 2P",
+    points: 62
+  }
+];
 
-const weekdayLabels = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
-
-const getWeekStart = (date: Date) => {
-  const day = date.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const start = new Date(date);
-  start.setDate(date.getDate() + diff);
-  start.setHours(0, 0, 0, 0);
-  return start;
+const squad = {
+  goalkeepers: ["Lukáš Novák", "Matěj Sláma"],
+  defenders: ["Ondřej Beneš", "Milan Růžička", "Tomáš Bartoš", "Petr Havel"],
+  midfielders: ["Jakub Kolář", "David Pospíšil", "Adam Špaček", "Daniel Maršík"],
+  attackers: ["Filip Šimek", "Martin Krajčík", "Štěpán Vondra"]
 };
 
-const getWeekDates = (base: Date) => {
-  const start = getWeekStart(base);
-  return Array.from({ length: 7 }, (_, index) => {
-    const day = new Date(start);
-    day.setDate(start.getDate() + index);
-    return day;
-  });
-};
+const gallery = [
+  {
+    src: "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=900&q=80",
+    alt: "Týmová fotka před zápasem"
+  },
+  {
+    src: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?auto=format&fit=crop&w=900&q=80",
+    alt: "Domácí stadion během zápasu"
+  },
+  {
+    src: "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=900&q=80",
+    alt: "Oslava gólu s fanoušky"
+  }
+];
 
-const formatTime = (totalSeconds: number) => {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-};
-
-export default function DashboardPage() {
-  const searchParams = useSearchParams();
-  const savedParam = searchParams.get("saved");
-  const [data, setData] = useState(() => readData());
-  const [timerRunning, setTimerRunning] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(
-    defaultSettings.mobilityGoalMin * 60
-  );
-  const [stepsInput, setStepsInput] = useState("");
-  const todayKey = getTodayKey();
-
-  useEffect(() => {
-    const latest = readData();
-    setData(latest);
-    setSecondsLeft(latest.settings.mobilityGoalMin * 60);
-  }, []);
-
-  useEffect(() => {
-    if (!timerRunning) return;
-    const interval = window.setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          setTimerRunning(false);
-          const updated = updateDailyLog(todayKey, {
-            mobilityDone: true,
-            mobilityMin: data.settings.mobilityGoalMin
-          });
-          setData(updated);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [timerRunning, todayKey, data.settings.mobilityGoalMin]);
-
-  const weekDates = useMemo(() => getWeekDates(new Date()), []);
-
-  const weekStats = useMemo(() => {
-    let mobilityCount = 0;
-    let stepsCount = 0;
-    let workoutsCount = 0;
-    const dateKeys = weekDates.map((date) => formatDate(date));
-    dateKeys.forEach((key) => {
-      const log = data.dailyLogs[key];
-      if (log?.mobilityDone) mobilityCount += 1;
-      if (log?.steps && log.steps >= data.settings.stepsGoal) stepsCount += 1;
-    });
-    workoutsCount = data.workoutLogs.filter((log) =>
-      dateKeys.includes(log.date)
-    ).length;
-    return { mobilityCount, stepsCount, workoutsCount };
-  }, [data.dailyLogs, data.settings.stepsGoal, data.workoutLogs, weekDates]);
-
-  const computeStreak = (predicate: (log: DailyLog | undefined) => boolean) => {
-    let streak = 0;
-    const cursor = new Date();
-    while (true) {
-      const key = formatDate(cursor);
-      if (!predicate(data.dailyLogs[key])) break;
-      streak += 1;
-      cursor.setDate(cursor.getDate() - 1);
-    }
-    return streak;
-  };
-
-  const mobilityStreak = useMemo(
-    () => computeStreak((log) => Boolean(log?.mobilityDone)),
-    [data.dailyLogs]
-  );
-
-  const stepsStreak = useMemo(
-    () =>
-      computeStreak(
-        (log) => Boolean(log?.steps && log.steps >= data.settings.stepsGoal)
-      ),
-    [data.dailyLogs, data.settings.stepsGoal]
-  );
-
-  const todayWorkout = useMemo(() => {
-    const today = new Date().getDay();
-    if (!data.settings.workoutDays.includes(today)) return null;
-    return getLastWorkoutTemplate(data.workoutLogs);
-  }, [data.settings.workoutDays, data.workoutLogs]);
-
-  const quickWorkoutTarget: WorkoutTemplate = todayWorkout ?? "A";
-
-  const handleStepsQuickSave = () => {
-    const steps = Number(stepsInput || 0);
-    const updated = updateDailyLog(todayKey, { steps });
-    setData(updated);
-    setStepsInput("");
-  };
-
-  const handleMobilityDone = () => {
-    const updated = updateDailyLog(todayKey, {
-      mobilityDone: true,
-      mobilityMin: data.settings.mobilityGoalMin
-    });
-    setData(updated);
-    setTimerRunning(false);
-    setSecondsLeft(data.settings.mobilityGoalMin * 60);
-  };
-
-  const resetTimer = () => {
-    setTimerRunning(false);
-    setSecondsLeft(data.settings.mobilityGoalMin * 60);
-  };
-
-  const todayLog = data.dailyLogs[todayKey];
-
+export default function TeamMiniWebPage() {
   return (
-    <section className="space-y-6">
-      {savedParam ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          Trénink {savedParam} uložen.
+    <section className="space-y-6 pb-6">
+      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-700 to-emerald-900 p-6 text-white shadow-sm">
+        <p className="text-xs uppercase tracking-[0.2em] text-emerald-100">Oficiální klubový web</p>
+        <h2 className="mt-2 text-3xl font-bold">TJ Sokol Dolní Lhota</h2>
+        <p className="mt-3 text-sm text-emerald-100">
+          Mini web máme postavený jako <strong>jednu přehlednou stránku</strong> s možností
+          budoucího větvení na podstránky (historie, hráči, galerie, kontakt).
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs">
+          <a href="#uspechy" className="rounded-full bg-white/15 px-3 py-1">
+            Úspěchy
+          </a>
+          <a href="#historie" className="rounded-full bg-white/15 px-3 py-1">
+            Ligová historie
+          </a>
+          <a href="#kadr" className="rounded-full bg-white/15 px-3 py-1">
+            Kádr
+          </a>
+          <a href="#galerie" className="rounded-full bg-white/15 px-3 py-1">
+            Fotky
+          </a>
         </div>
-      ) : null}
+      </div>
 
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs uppercase text-slate-400">Tento týden</p>
-            <h2 className="text-lg font-semibold">Skóre</h2>
-          </div>
-          <div className="text-xs text-slate-500">
-            {formatDate(weekDates[0])}–{formatDate(weekDates[6])}
-          </div>
+      <div id="uspechy" className="rounded-2xl bg-white p-4 shadow-sm">
+        <h3 className="text-lg font-semibold">Největší úspěchy</h3>
+        <div className="mt-3 grid gap-3">
+          {achievements.map((item) => (
+            <article key={item.year} className="rounded-xl border border-slate-200 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                {item.year}
+              </div>
+              <h4 className="mt-1 font-semibold">{item.title}</h4>
+              <p className="mt-1 text-sm text-slate-600">{item.detail}</p>
+            </article>
+          ))}
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+      </div>
+
+      <div id="historie" className="rounded-2xl bg-white p-4 shadow-sm">
+        <h3 className="text-lg font-semibold">Ligová historie (accordion)</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Připravené stejně jako na původním webu – každá sezona je samostatně rozbalitelná.
+        </p>
+        <div className="mt-3 space-y-2">
+          {leagueHistory.map((season) => (
+            <details key={season.season} className="group rounded-xl border border-slate-200 p-3">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                <span className="font-medium">{season.season}</span>
+                <span className="text-xs text-slate-500 group-open:hidden">Zobrazit</span>
+                <span className="hidden text-xs text-slate-500 group-open:inline">Skrýt</span>
+              </summary>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-700">
+                <div>
+                  <span className="text-slate-500">Soutěž:</span> {season.league}
+                </div>
+                <div>
+                  <span className="text-slate-500">Umístění:</span> {season.position}
+                </div>
+                <div className="col-span-2">
+                  <span className="text-slate-500">Bilance:</span> {season.record}
+                </div>
+                <div className="col-span-2">
+                  <span className="text-slate-500">Body:</span> {season.points}
+                </div>
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+
+      <div id="kadr" className="rounded-2xl bg-white p-4 shadow-sm">
+        <h3 className="text-lg font-semibold">Soupiska</h3>
+        <div className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
           <div className="rounded-xl bg-slate-50 p-3">
-            <div className="text-lg font-semibold">
-              {weekStats.workoutsCount}/{data.settings.workoutsGoalPerWeek}
-            </div>
-            <div className="text-xs text-slate-500">Tréninky</div>
+            <h4 className="font-semibold">Brankáři</h4>
+            <p className="mt-1 text-slate-600">{squad.goalkeepers.join(", ")}</p>
           </div>
           <div className="rounded-xl bg-slate-50 p-3">
-            <div className="text-lg font-semibold">{weekStats.mobilityCount}/7</div>
-            <div className="text-xs text-slate-500">Mobilita</div>
+            <h4 className="font-semibold">Obránci</h4>
+            <p className="mt-1 text-slate-600">{squad.defenders.join(", ")}</p>
           </div>
           <div className="rounded-xl bg-slate-50 p-3">
-            <div className="text-lg font-semibold">{weekStats.stepsCount}/7</div>
-            <div className="text-xs text-slate-500">Kroky</div>
+            <h4 className="font-semibold">Záložníci</h4>
+            <p className="mt-1 text-slate-600">{squad.midfielders.join(", ")}</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 p-3">
+            <h4 className="font-semibold">Útočníci</h4>
+            <p className="mt-1 text-slate-600">{squad.attackers.join(", ")}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-white p-4 shadow-sm">
-          <div className="text-xs text-slate-400">Streak</div>
-          <div className="text-lg font-semibold">Mobilita</div>
-          <div className="mt-2 text-2xl font-semibold">{mobilityStreak} dní</div>
+      <div id="galerie" className="rounded-2xl bg-white p-4 shadow-sm">
+        <h3 className="text-lg font-semibold">Fotogalerie</h3>
+        <div className="mt-3 grid grid-cols-1 gap-3">
+          {gallery.map((item) => (
+            <figure key={item.src} className="overflow-hidden rounded-xl bg-slate-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={item.src} alt={item.alt} className="h-40 w-full object-cover" />
+              <figcaption className="p-2 text-xs text-slate-600">{item.alt}</figcaption>
+            </figure>
+          ))}
         </div>
-        <div className="rounded-2xl bg-white p-4 shadow-sm">
-          <div className="text-xs text-slate-400">Streak</div>
-          <div className="text-lg font-semibold">Kroky</div>
-          <div className="mt-2 text-2xl font-semibold">{stepsStreak} dní</div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Dnes</h2>
-          <span className="text-xs text-slate-500">
-            {weekdayLabels[new Date().getDay()]}
-          </span>
-        </div>
-        <div className="mt-3 rounded-xl border border-slate-100 p-3 text-sm">
-          {todayWorkout ? (
-            <span>
-              Dnes je trénink <strong>{todayWorkout}</strong>
-            </span>
-          ) : (
-            "Dnes volno"
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-semibold">Rychlé akce</h2>
-        <div className="mt-3 grid gap-2">
-          <button
-            type="button"
-            onClick={handleMobilityDone}
-            className="rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-700"
-          >
-            Mobilita hotovo ({data.settings.mobilityGoalMin} min)
-          </button>
-          <div className="flex gap-2">
-            <input
-              type="number"
-              inputMode="numeric"
-              value={stepsInput}
-              onChange={(event) => setStepsInput(event.target.value)}
-              placeholder="Zapsat kroky"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
-            />
-            <button
-              type="button"
-              onClick={handleStepsQuickSave}
-              className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-            >
-              Uložit
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={() => setTimerRunning((prev) => !prev)}
-            className="rounded-xl bg-emerald-500 py-2 text-sm font-semibold text-white"
-          >
-            {timerRunning
-              ? `Pauza ${formatTime(secondsLeft)}`
-              : `Spustit mobilitu ${data.settings.mobilityGoalMin}:00`}
-          </button>
-          <button
-            type="button"
-            onClick={resetTimer}
-            className="rounded-xl border border-slate-200 py-2 text-sm font-semibold text-slate-700"
-          >
-            Reset timeru
-          </button>
-          <Link
-            href={`/workouts/${quickWorkoutTarget.toLowerCase()}`}
-            className="rounded-xl bg-slate-900 py-2 text-center text-sm font-semibold text-white"
-          >
-            Zalogovat trénink {quickWorkoutTarget}
-          </Link>
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Mobilita</h2>
-          <span
-            className={`rounded-full px-2 py-1 text-xs font-medium ${
-              todayLog?.mobilityDone
-                ? "bg-emerald-100 text-emerald-700"
-                : "bg-slate-100 text-slate-500"
-            }`}
-          >
-            {todayLog?.mobilityDone ? "Hotovo" : "Čeká"}
-          </span>
-        </div>
-        <div className="text-sm text-slate-500">
-          {todayLog?.mobilityMin ?? 0} / {data.settings.mobilityGoalMin} min
-        </div>
-      </div>
-
-      <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Kroky</h2>
-          <span className="text-xs text-slate-500">Cíl {data.settings.stepsGoal}</span>
-        </div>
-        <div className="text-2xl font-semibold">{todayLog?.steps ?? 0}</div>
       </div>
     </section>
   );

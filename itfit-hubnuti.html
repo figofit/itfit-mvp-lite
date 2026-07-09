@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ItFit Hubnutí online</title>
+  <meta name="description" content="Jednoduchý průvodce hubnutím bez extrémních diet. Samostatný HTML produkt s denní evidencí v localStorage.">
+  <style>
+    :root {
+      --bg: #f7f4ee;
+      --paper: #ffffff;
+      --ink: #111827;
+      --muted: #64748b;
+      --line: #e5e7eb;
+      --soft: #f1f5f9;
+      --green: #28d17c;
+      --green-dark: #087a46;
+      --dark: #111827;
+      --radius: 26px;
+      --shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, Manrope, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+    }
+    a { color: inherit; }
+    .page { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 56px; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 20px;
+      padding: 16px 18px;
+      background: rgba(255, 255, 255, 0.86);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      backdrop-filter: blur(10px);
+    }
+    .brand-eyebrow, .eyebrow {
+      margin: 0;
+      color: var(--green-dark);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .brand-title { margin: 2px 0 0; font-size: 21px; font-weight: 900; letter-spacing: -0.03em; }
+    .topbar-note { max-width: 590px; margin: 0; color: var(--muted); font-size: 14px; }
+    .hero {
+      overflow: hidden;
+      position: relative;
+      padding: clamp(34px, 6vw, 70px);
+      color: white;
+      background:
+        radial-gradient(circle at 88% 18%, rgba(40, 209, 124, 0.34), transparent 30%),
+        linear-gradient(135deg, #111827 0%, #182235 55%, #10251c 100%);
+      border-radius: 34px;
+      box-shadow: var(--shadow);
+    }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr); gap: 28px; align-items: center; }
+    .hero h1 { max-width: 760px; margin: 14px 0 0; font-size: clamp(38px, 6vw, 72px); line-height: 0.98; letter-spacing: -0.06em; }
+    .hero p { max-width: 680px; color: #dbe7e2; font-size: 18px; }
+    .hero-card { padding: 22px; background: rgba(255, 255, 255, 0.10); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 26px; }
+    .hero-card strong { display: block; margin-bottom: 8px; color: var(--green); font-size: 14px; text-transform: uppercase; letter-spacing: 0.12em; }
+    .buttons { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+    .button { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 12px 18px; border-radius: 999px; font-weight: 850; text-decoration: none; }
+    .button-primary { background: var(--green); color: #07130d; }
+    .button-secondary { border: 1px solid rgba(255,255,255,.22); color: white; }
+    section { margin-top: 24px; }
+    .panel { padding: clamp(22px, 4vw, 34px); background: var(--paper); border: 1px solid rgba(226, 232, 240, 0.9); border-radius: var(--radius); box-shadow: 0 10px 28px rgba(15, 23, 42, 0.045); }
+    .section-head { max-width: 760px; margin-bottom: 20px; }
+    h2 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 38px); line-height: 1.08; letter-spacing: -0.04em; }
+    h3 { margin: 0; font-size: 19px; line-height: 1.25; }
+    p { margin: 10px 0 0; }
+    .muted { color: var(--muted); }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .card { padding: 20px; background: #fbfaf7; border: 1px solid var(--line); border-radius: 22px; }
+    .card p, .module p { color: var(--muted); font-size: 15px; }
+    .lesson-text { max-width: 820px; color: #334155; font-size: 17px; }
+    .highlight { margin-top: 18px; padding: 18px; background: #ecfdf5; border: 1px solid #bbf7d0; border-radius: 22px; color: #064e3b; font-weight: 800; }
+    .modules { display: grid; gap: 12px; }
+    details.module { background: var(--paper); border: 1px solid var(--line); border-radius: 22px; }
+    details.module[open] { border-color: #a7f3d0; box-shadow: 0 12px 34px rgba(8, 122, 70, 0.08); }
+    summary { cursor: pointer; list-style: none; padding: 18px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    summary::-webkit-details-marker { display: none; }
+    .summary-left { display: flex; gap: 14px; }
+    .number { flex: 0 0 auto; display: grid; place-items: center; width: 42px; height: 42px; background: #dcfce7; color: var(--green-dark); border-radius: 16px; font-weight: 950; }
+    .open-label { flex: 0 0 auto; padding: 6px 10px; border-radius: 999px; background: var(--soft); color: var(--muted); font-size: 12px; font-weight: 850; }
+    details[open] .open-label { background: #dcfce7; color: var(--green-dark); }
+    .module-body { padding: 0 18px 18px 74px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 0; padding: 0; list-style: none; }
+    .chips li { padding: 9px 11px; background: #f8fafc; border-radius: 999px; color: #334155; font-size: 13px; }
+    .tracker { background: #10251c; color: white; }
+    .tracker .muted { color: #cbd5e1; }
+    .tracker-grid { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr); gap: 18px; align-items: start; }
+    .checklist { display: grid; gap: 10px; margin-top: 18px; }
+    .check-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; }
+    .check-row input { width: 20px; height: 20px; accent-color: var(--green); }
+    .form-box { padding: 18px; background: white; color: var(--ink); border-radius: 22px; }
+    label { display: block; margin-top: 12px; color: #334155; font-size: 13px; font-weight: 800; }
+    input, textarea {
+      width: 100%;
+      margin-top: 6px;
+      padding: 12px 13px;
+      border: 1px solid #dbe2ea;
+      border-radius: 14px;
+      font: inherit;
+      outline: none;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    input:focus, textarea:focus { border-color: var(--green-dark); box-shadow: 0 0 0 3px rgba(40, 209, 124, 0.14); }
+    .form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    button { border: 0; cursor: pointer; padding: 11px 14px; border-radius: 999px; font: inherit; font-weight: 900; }
+    .save { background: var(--green); color: #06140d; }
+    .ghost { background: #eef2f7; color: #243044; }
+    .danger { background: #fee2e2; color: #991b1b; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+    .stat { padding: 14px; background: rgba(255,255,255,.08); border-radius: 18px; }
+    .stat b { display: block; color: var(--green); font-size: 24px; line-height: 1; }
+    .history { margin-top: 14px; display: grid; gap: 8px; max-height: 280px; overflow: auto; }
+    .history-item { padding: 12px; background: rgba(255,255,255,.08); border-radius: 16px; font-size: 14px; }
+    .footer { margin-top: 24px; padding: 24px; color: var(--muted); text-align: center; }
+
+    @media (max-width: 820px) {
+      .topbar, .hero-grid, .tracker-grid { grid-template-columns: 1fr; display: grid; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .module-body { padding-left: 18px; }
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div>
+        <p class="brand-eyebrow">ItFit</p>
+        <p class="brand-title">Hubnutí online</p>
+      </div>
+      <p class="topbar-note">Jeden čistý HTML soubor. Nahraješ na hosting a funguje. Evidence se ukládá do prohlížeče přes localStorage, takže databázi nepotřebuješ.</p>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-grid">
+          <div>
+            <p class="eyebrow">Samostatný produkt + budoucí sekce Vaultu</p>
+            <h1>Hubnutí bez extrémů, chaosu a pocitu, že musíš začít dokonale.</h1>
+            <p>Jednoduchý průvodce pro lidi, kteří chtějí zhubnout a konečně pochopit, co mají dělat s jídlem, pohybem a režimem.</p>
+            <div class="buttons">
+              <a class="button button-primary" href="#start">Začni tady</a>
+              <a class="button button-secondary" href="#evidence">Denní evidence</a>
+            </div>
+          </div>
+          <aside class="hero-card">
+            <strong>Co je cílem</strong>
+            <p>Nemusíš počítat každé sousto ani trávit hodiny na kardiu. Nejdřív nastav pár věcí, které mají největší vliv: bílkoviny, syté jídlo, kroky, jednoduchý silový trénink a pravidelnost.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="start" class="panel">
+        <div class="section-head">
+          <p class="eyebrow">Kde začít?</p>
+          <h2>Vyber si, co teď nejvíc řešíš.</h2>
+        </div>
+        <div class="grid-2">
+          <article class="card"><h3>Chci pochopit hubnutí</h3><p>Začni tady, pokud nevíš, proč se váha nehýbe, co je kalorický deficit a jak hubnout bez extrémů.</p></article>
+          <article class="card"><h3>Chci upravit jídlo</h3><p>Jednoduché principy pro běžný den: bílkoviny, vláknina, pití, porce a nejčastější chyby.</p></article>
+          <article class="card"><h3>Chci vědět, jak se hýbat</h3><p>Kroky, silový trénink a kardio jednoduše. Bez zbytečného ničení těla.</p></article>
+          <article class="card"><h3>Chci plán na první týden</h3><p>Konkrétní kroky, podle kterých můžeš začít hned dnes.</p></article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <p class="eyebrow">První lekce</p>
+        <h2>Jak hubnutí funguje</h2>
+        <div class="lesson-text">
+          <p>Hubnutí není magie. Aby tělo začalo využívat uloženou energii, musí být dlouhodobě v mírném kalorickém deficitu. To znamená, že přijímáš o něco méně energie, než tvoje tělo spotřebuje.</p>
+          <p>Neznamená to hladovění. Neznamená to jíst jen salát. A neznamená to trestat se kardiem za každé jídlo. Nejlepší deficit je takový, který zvládneš držet dlouhodobě.</p>
+          <div class="highlight">Tvůj první cíl není zhubnout co nejrychleji. Tvůj první cíl je pochopit, co tě nejvíc brzdí, a upravit jednu až tři věci, které zvládneš opakovat.</div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <p class="eyebrow">Obsah průvodce</p>
+          <h2>Jedna cesta, dva obaly.</h2>
+          <p class="muted">Použitelné jako ItFit Hubnutí online, jako sekce Hubnutí ve Vaultu i jako bonus k osobní službě Hubnutí Olomouc.</p>
+        </div>
+        <div class="modules" id="modules"></div>
+      </section>
+
+      <section id="evidence" class="panel tracker">
+        <div class="tracker-grid">
+          <div>
+            <p class="eyebrow">Denní evidence</p>
+            <h2>Co sledovat každý den, aby se to hýbalo.</h2>
+            <p class="muted">Databázi nepotřebuješ. Vše se ukládá jen u návštěvníka v jeho prohlížeči. Když chceš data přenést, použij export JSON.</p>
+            <div class="checklist" id="dailyChecks"></div>
+            <div class="stats">
+              <div class="stat"><b id="daysCount">0</b><span>dní zapsáno</span></div>
+              <div class="stat"><b id="avgScore">0%</b><span>průměr splnění</span></div>
+              <div class="stat"><b id="lastWeight">–</b><span>poslední váha</span></div>
+            </div>
+          </div>
+
+          <div class="form-box">
+            <h3>Dnešní zápis</h3>
+            <label for="entryDate">Datum</label>
+            <input id="entryDate" type="date">
+
+            <label for="weight">Váha (volitelné)</label>
+            <input id="weight" type="number" step="0.1" placeholder="např. 86.4">
+
+            <label for="steps">Kroky / běžný pohyb</label>
+            <input id="steps" type="number" placeholder="např. 7500">
+
+            <label for="note">Poznámka</label>
+            <textarea id="note" placeholder="Co šlo dobře? Co zítra zjednoduším?"></textarea>
+
+            <div class="form-actions">
+              <button class="save" type="button" id="saveEntry">Uložit zápis</button>
+              <button class="ghost" type="button" id="exportData">Export JSON</button>
+              <button class="danger" type="button" id="clearData">Smazat evidenci</button>
+            </div>
+            <div class="history" id="history"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">ItFit Hubnutí online · čistý HTML soubor · bez externích knihoven · localStorage evidence</footer>
+  </div>
+
+  <script>
+    const modules = [
+      ["01", "Začni tady", "Úvodní mapa průvodce: co najdeš uvnitř, co řešit jako první a proč není potřeba měnit všechno najednou.", ["Vyber si největší brzdu", "Nastav první malý krok", "Pokračuj bez tlaku na dokonalost"]],
+      ["02", "Jak hubnutí funguje", "Kalorický deficit vysvětlený lidsky. Bez strašení, extrémních diet a trestání se kardiem za každé jídlo.", ["Mírný deficit", "Dlouhodobá udržitelnost", "1–3 změny, které zopakuješ"]],
+      ["03", "Jídlo jednoduše", "Praktické principy pro běžný den: bílkoviny, vláknina, pití, porce, pravidelnost a nejčastější chyby.", ["Jídlo, které zasytí", "Tekuté kalorie pod kontrolou", "Méně chaosu v porcích"]],
+      ["04", "Pohyb při hubnutí", "Kroky, silový trénink a kardio bez zbytečného ničení těla. Pohyb jako podpora, ne jako trest.", ["Více běžného pohybu", "Silově 2–3× týdně", "Kardio jako doplněk"]],
+      ["05", "První týden", "Konkrétní jednoduchý plán na prvních sedm dní: co sledovat, co upravit a jak začít cvičit.", ["Zapiš realitu", "Přidej bílkoviny", "Vyzkoušej trénink A/B"]],
+      ["06", "Trénink pro začátek", "Dva jednoduché tréninky týdně s návazností na cviky a budoucí Vault. Stačí začít základní verzí.", ["Trénink A", "Trénink B", "Technika před egem"]],
+      ["07", "Nejčastější chyby", "Proč se váha nehýbe: víkendy, tekuté kalorie, málo bílkovin, málo kroků nebo příliš velký chaos.", ["Nehledej viníka v jednom dni", "Sleduj průměr", "Oprav největší brzdu"]],
+      ["08", "Co dál", "Kdy pokračovat samostatně, kdy přejít do ItFit Vaultu a kdy dává smysl osobní konzultace.", ["Samostatný režim", "Sekce ve Vaultu", "Bonus k Hubnutí Olomouc"]]
+    ];
+
+    const habits = [
+      "Bílkoviny alespoň ve 2 jídlech",
+      "Zelenina / vláknina během dne",
+      "Pití bez zbytečných tekutých kalorií",
+      "Kroky nebo krátká procházka",
+      "Spánek a režim bez velkého chaosu"
+    ];
+
+    const storageKey = "itfitHubnutiEntries";
+    const modulesBox = document.querySelector("#modules");
+    const checksBox = document.querySelector("#dailyChecks");
+    const historyBox = document.querySelector("#history");
+    const dateInput = document.querySelector("#entryDate");
+    const weightInput = document.querySelector("#weight");
+    const stepsInput = document.querySelector("#steps");
+    const noteInput = document.querySelector("#note");
+
+    dateInput.valueAsDate = new Date();
+
+    modulesBox.innerHTML = modules.map(([number, title, text, chips]) => `
+      <details class="module">
+        <summary>
+          <span class="summary-left">
+            <span class="number">${number}</span>
+            <span><h3>${title}</h3><p>${text}</p></span>
+          </span>
+          <span class="open-label">otevřít</span>
+        </summary>
+        <div class="module-body"><ul class="chips">${chips.map(chip => `<li>${chip}</li>`).join("")}</ul></div>
+      </details>
+    `).join("");
+
+    checksBox.innerHTML = habits.map((habit, index) => `
+      <label class="check-row"><input type="checkbox" data-habit="${index}"><span>${habit}</span></label>
+    `).join("");
+
+    function getEntries() {
+      return JSON.parse(localStorage.getItem(storageKey) || "[]");
+    }
+
+    function setEntries(entries) {
+      localStorage.setItem(storageKey, JSON.stringify(entries));
+      renderStats();
+    }
+
+    function renderStats() {
+      const entries = getEntries().sort((a, b) => b.date.localeCompare(a.date));
+      const totalScore = entries.reduce((sum, entry) => sum + entry.score, 0);
+      const avg = entries.length ? Math.round(totalScore / entries.length) : 0;
+      const withWeight = entries.find(entry => entry.weight);
+      document.querySelector("#daysCount").textContent = entries.length;
+      document.querySelector("#avgScore").textContent = avg + "%";
+      document.querySelector("#lastWeight").textContent = withWeight ? withWeight.weight + " kg" : "–";
+      historyBox.innerHTML = entries.slice(0, 10).map(entry => `
+        <div class="history-item"><strong>${entry.date}</strong> · ${entry.score}% splněno${entry.weight ? " · " + entry.weight + " kg" : ""}${entry.steps ? " · " + entry.steps + " kroků" : ""}<br>${entry.note || "Bez poznámky"}</div>
+      `).join("") || "<p class='muted'>Zatím nemáš žádný zápis.</p>";
+    }
+
+    document.querySelector("#saveEntry").addEventListener("click", () => {
+      const checked = [...document.querySelectorAll("[data-habit]:checked")].map(input => Number(input.dataset.habit));
+      const score = Math.round((checked.length / habits.length) * 100);
+      const entry = {
+        date: dateInput.value,
+        weight: weightInput.value,
+        steps: stepsInput.value,
+        note: noteInput.value.trim(),
+        checked,
+        score
+      };
+      const entries = getEntries().filter(item => item.date !== entry.date);
+      entries.push(entry);
+      setEntries(entries);
+      alert("Zápis uložen. Zítra zase jednoduše.");
+    });
+
+    document.querySelector("#exportData").addEventListener("click", () => {
+      const data = JSON.stringify(getEntries(), null, 2);
+      const blob = new Blob([data], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "itfit-hubnuti-evidence.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.querySelector("#clearData").addEventListener("click", () => {
+      if (confirm("Opravdu smazat všechny lokální zápisy v tomto prohlížeči?")) {
+        localStorage.removeItem(storageKey);
+        renderStats();
+      }
+    });
+
+    renderStats();
+  </script>
+</body>
+</html>
